@@ -4,20 +4,20 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import logo from "../../assets/images/medverselogo.png";
 
-function Login() {
+function ForgotPassword() {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const handleLogin = async () => {
+  const handleForgotPassword = async () => {
+    setMessage("");
     setError("");
 
-    if (!email || !password) {
-      setError("Please enter email and password");
+    if (!email) {
+      setError("Please enter your email address");
       return;
     }
 
@@ -25,31 +25,29 @@ function Login() {
       setLoading(true);
 
       const response = await axios.post(
-        "http://127.0.0.1:8000/auth/login",
+        "http://127.0.0.1:8000/auth/forgot-password",
         {
           email: email,
-          password: password,
         }
       );
 
-      const { access_token, token_type } = response.data;
-
-      // Store JWT for authenticated requests
-      localStorage.setItem("access_token", access_token);
-      localStorage.setItem("token_type", token_type);
-
-      // Login successful
-      navigate("/dashboard");
+      setMessage(
+        response.data?.message ||
+        "Password reset link sent to your email"
+      );
 
     } catch (error: any) {
-      console.error("Login error:", error);
+      console.error("Forgot password error:", error);
 
       if (error.response) {
         setError(
-          error.response.data?.detail || "Invalid email or password"
+          error.response.data?.detail ||
+          "Unable to send password reset email"
         );
       } else {
-        setError("Cannot connect to MedVerse AI server");
+        setError(
+          "Cannot connect to MedVerse AI server"
+        );
       }
 
     } finally {
@@ -74,11 +72,11 @@ function Login() {
         />
 
         <h1 className="text-3xl font-bold text-blue-700 mt-4">
-          MedVerse AI
+          Forgot Password
         </h1>
 
         <p className="text-gray-500 mt-2">
-          Intelligent Medical Report Analyzer
+          Enter your registered email address
         </p>
 
         <input
@@ -89,45 +87,31 @@ function Login() {
           className="w-full mt-6 p-3 border rounded-lg"
         />
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full mt-4 p-3 border rounded-lg"
-        />
-
         {error && (
           <p className="text-red-500 text-sm mt-3">
             {error}
           </p>
         )}
 
+        {message && (
+          <p className="text-green-600 text-sm mt-3">
+            {message}
+          </p>
+        )}
+
         <button
-          onClick={handleLogin}
+          onClick={handleForgotPassword}
           disabled={loading}
           className="w-full mt-6 bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
         >
-          {loading ? "Logging in..." : "Login"}
+          {loading ? "Sending..." : "Send Reset Link"}
         </button>
 
-        {/* Forgot Password */}
         <p
-          className="text-blue-600 text-sm mt-4 cursor-pointer hover:underline"
-          onClick={() => navigate("/forgot-password")}
+          className="text-blue-600 text-sm mt-5 cursor-pointer hover:underline"
+          onClick={() => navigate("/login")}
         >
-          Forgot Password?
-        </p>
-
-        <p className="mt-5 text-sm text-gray-500">
-          Don't have an account?
-
-          <span
-            className="text-blue-600 ml-1 cursor-pointer hover:underline"
-            onClick={() => navigate("/register")}
-          >
-            Register
-          </span>
+          ← Back to Login
         </p>
 
       </motion.div>
@@ -136,4 +120,4 @@ function Login() {
   );
 }
 
-export default Login;
+export default ForgotPassword;

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import axios from "axios";
 import {
   FaUpload,
   FaFilePdf,
@@ -39,11 +40,23 @@ function Upload() {
     setFile(null);
   }
 
-  function analyzeReport() {
-    if (!file) {
-      alert("Please upload a medical report.");
-      return;
-    }
+  async function analyzeReport() {
+  if (!file) {
+    alert("Please upload a medical report.");
+    return;
+  }
+
+  try {
+    const formData = new FormData();
+
+    formData.append("file", file);
+
+    const response = await axios.post(
+      "http://127.0.0.1:8000/reports/upload",
+      formData
+    );
+
+    console.log("Upload response:", response.data);
 
     navigate("/analysis", {
       state: {
@@ -58,9 +71,26 @@ function Upload() {
         reportType,
         fileName: file.name,
         uploadDate: new Date().toLocaleDateString(),
+
+        savedPath: response.data.saved_path,
       },
     });
+
+  } catch (error: any) {
+    console.error("Upload error:", error);
+
+    if (error.response) {
+      alert(
+        error.response.data?.detail ||
+        "Unable to upload report"
+      );
+    } else {
+      alert(
+        "Cannot connect to MedVerse AI server"
+      );
+    }
   }
+}
 
   return (
     <div className="min-h-screen bg-gray-50">
