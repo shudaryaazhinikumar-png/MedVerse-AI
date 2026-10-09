@@ -1,36 +1,24 @@
-from fastapi import Header, HTTPException
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from app.utils.jwt import decode_access_token
 
 
+security = HTTPBearer()
+
 
 async def get_current_user(
-    authorization: str | None = Header(None)
+    credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
 
-    if not authorization:
-
-        raise HTTPException(
-            status_code=401,
-            detail="Token missing"
-        )
-
-
-    token = authorization.replace(
-        "Bearer ",
-        ""
-    )
-
+    token = credentials.credentials
 
     user = decode_access_token(token)
 
-
     if not user:
-
         raise HTTPException(
             status_code=401,
             detail="Invalid token"
         )
-
 
     return user

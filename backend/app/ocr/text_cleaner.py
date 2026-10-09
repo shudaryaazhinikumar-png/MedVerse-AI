@@ -1,56 +1,191 @@
+"""
+MedVerse AI - OCR Text Cleaner
+"""
+
+from __future__ import annotations
+
 import re
 
 
-# Common OCR mistakes in medical test names.
-# These corrections are only for labels,
-# not for numerical medical values.
-
-OCR_CORRECTIONS = {
-    "CONPLETE": "COMPLETE",
-    "BLOB CONT": "BLOOD COUNT",
-    "Hemogiobin": "Hemoglobin",
-    "Hemogiobin": "Hemoglobin",
-    "Packed Celt": "Packed Cell",
-    "Platetet": "Platelet",
-    "Leukocyte Court": "Leukocyte Count",
-    "Leucocyte Court": "Leucocyte Count",
-    "pReccomt": "RBC Count",
-    "Pecy": "MCV",
-    "Pec few": "MCH",
-    "PmcHe": "MCHC",
-    "ROW": "RDW",
-}
-
+# ============================================================
+# CLEAN OCR TEXT
+# ============================================================
 
 def clean_ocr_text(text: str) -> str:
+    """
+    Clean OCR text while preserving:
+    - decimal points
+    - medical values
+    - units
+    - reference ranges
+    """
 
     if not text:
         return ""
 
-    # Normalize line endings
-    text = text.replace("\r\n", "\n")
-    text = text.replace("\r", "\n")
+    # --------------------------------------------------------
+    # Basic character normalization
+    # --------------------------------------------------------
 
-    # Remove excessive spaces while preserving lines
+    text = text.replace(
+        "\x0c",
+        " ",
+    )
+
+    text = text.replace(
+        "\u2013",
+        "-",
+    )
+
+    text = text.replace(
+        "\u2014",
+        "-",
+    )
+
+    text = text.replace(
+        "\u2212",
+        "-",
+    )
+
+    text = text.replace(
+        "\u00a0",
+        " ",
+    )
+
+    # --------------------------------------------------------
+    # OCR decimal cleanup
+    # --------------------------------------------------------
+
+    text = text.replace(
+        ",",
+        ".",
+    )
+
+    # --------------------------------------------------------
+    # Medical units
+    # --------------------------------------------------------
+
+    replacements = {
+
+        r"(?i)\bthou\s*/\s*mm\s*3\b":
+            "thou/mm3",
+
+        r"(?i)\bthou\s*mm\s*3\b":
+            "thou/mm3",
+
+        r"(?i)\bthou\s*/\s*mm3\b":
+            "thou/mm3",
+
+        r"(?i)\bthoufmm3\b":
+            "thou/mm3",
+
+        r"(?i)\bthoumm3\b":
+            "thou/mm3",
+
+        r"(?i)\bmg\s*/\s*dl\b":
+            "mg/dL",
+
+        r"(?i)\bg\s*/\s*dl\b":
+            "g/dL",
+
+        r"(?i)\bmmol\s*/\s*l\b":
+            "mmol/L",
+
+        r"(?i)\bmiu\s*/\s*l\b":
+            "mIU/L",
+
+        r"(?i)\biu\s*/\s*l\b":
+            "IU/L",
+    }
+
+    for pattern, replacement in replacements.items():
+
+        text = re.sub(
+            pattern,
+            replacement,
+            text,
+        )
+
+    # --------------------------------------------------------
+    # Spaces
+    # --------------------------------------------------------
+
+    text = re.sub(
+        r"[ \t]+",
+        " ",
+        text,
+    )
+
+    text = re.sub(
+        r"\s*-\s*",
+        " - ",
+        text,
+    )
+
+    # --------------------------------------------------------
+    # Remove repeated dots ONLY
+    # Do NOT remove decimal points
+    # --------------------------------------------------------
+
+    text = re.sub(
+        r"\.{3,}",
+        ".",
+        text,
+    )
+
+    # --------------------------------------------------------
+    # Clean individual lines
+    # --------------------------------------------------------
+
     lines = []
 
-    for line in text.split("\n"):
+    for line in text.splitlines():
 
         line = line.strip()
 
-        if not line:
-            continue
+        if line:
+            lines.append(line)
 
-        # Apply known OCR corrections
-        for wrong, correct in OCR_CORRECTIONS.items():
-            line = line.replace(wrong, correct)
+    return "\n".join(lines)
 
-        # Replace repeated spaces with one space
-        line = re.sub(r"[ \t]+", " ", line)
 
-        lines.append(line)
+# ============================================================
+# NORMALIZE LABEL
+# ============================================================
 
-    # Remove excessive blank lines
-    cleaned_text = "\n".join(lines)
+def normalize_label(
+    label: str,
+) -> str:
+    """
+    Normalize a medical test label.
 
-    return cleaned_text
+    IMPORTANT:
+    Decimal points are preserved because OCR values
+    such as 39.60, 0.34 and 12.00 must remain intact.
+    """
+
+    label = label.lower().strip()
+
+    # Keep:
+    # letters
+    # numbers
+    # decimal points
+    # %
+    # parentheses
+    # slash
+    # plus
+    # minus
+
+    label = re.sub(
+        r"[^a-z0-9.%()/+\- ]+",
+        " ",
+        label,
+    )
+
+    label = re.sub(
+        r"\s+",
+        " ",
+        label,
+    )
+
+    return label.strip()
